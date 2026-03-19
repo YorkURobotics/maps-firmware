@@ -23,7 +23,7 @@ maps-firmware/
 │ │ ├── Src/              <- Source files
 │ │ └── Startup/          <- Startup code
 │ ├── Drivers/            <- STM32 HAL and CMSIS drivers
-│ └── maps.ioc          <- STM32CubeMX project file
+│ └── maps.ioc            <- STM32CubeMX project file
 │
 ├── .github/              <- CI/CD workflows
 ├── .gitignore            <- Git ignore rules
