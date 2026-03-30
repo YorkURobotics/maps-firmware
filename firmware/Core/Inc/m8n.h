@@ -1,8 +1,7 @@
 /*
  * m8n.h
  *
- *  Created on: 16 มี.ค. 2569
- *      Author: pkuna
+ * Header file for the m8n gps
  */
 
 #ifndef SRC_M8N_H_
@@ -13,6 +12,7 @@
 #include <stdbool.h>
 #include "circ_buffer.h"
 
+// Declare and initialize variables
 uint8_t gpsData = 0x55;
 volatile uint64_t CAN_TX;
 int gpsDataSize = 128;
