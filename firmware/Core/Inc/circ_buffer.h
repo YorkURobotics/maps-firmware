@@ -17,23 +17,28 @@ typedef struct {
 	int head;
 	int tail;
 	const int maxLen;
-} circularBuffer;
+} CircularBuffer;
+
+// Indicates the buffer's current status
+typedef enum {
+    BUFFER_EMPTY,
+    BUFFER_FULL,
+    BUFFER_PARTIAL
+} BufferStatus;
 
 // Define a macro to create a circular buffer
 #define circBuffDef(buff, size)                	\
     uint8_t buff##_data_space[size];           	\
-    circularBuffer buff = {						\
+    CircularBuffer buff = {						\
         .buffer = buff##_data_space,         	\
         .head = 0,                        		\
         .tail = 0,                        		\
         .maxLen = size                       	\
     }
 
-extern circularBuffer gpsBuffer; // Preemptively declaring gpsBuffer using extern to be used across files
-
 // Declare methods for circular buffer
-bool checkCircBuff(circularBuffer *cb);
-bool circBuffPush(circularBuffer *cb, uint8_t data);
-bool circBuffPop(circularBuffer *cb, uint8_t *data);
+BufferStatus checkCircBuff(CircularBuffer *cb);
+bool circBuffPush(CircularBuffer *cb, uint8_t data[], int dataLength);
+bool circBuffPop(CircularBuffer *cb, uint8_t *data[], int sendLength);
 
 #endif /* INC_CIRC_BUFFER_H_ */
