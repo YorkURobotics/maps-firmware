@@ -60,13 +60,13 @@ bool circBuffPush(CircularBuffer *cb, uint8_t data[], int dataLength) {
  * @return true if data was successfully retrieved.
  * @return false if the buffer is empty.
  */
-bool circBuffPop(CircularBuffer *cb, uint8_t *data[], int sendLength) {
+bool circBuffPop(CircularBuffer *cb, uint8_t *data, int sendLength) {
 	if (checkCircBuff(cb) == BUFFER_EMPTY) {
 		return false;
 	}
 
 	for (int i = 0; i < sendLength; i++) {
-		*data[i] = cb->buffer[cb->tail];
+		data[i] = cb->buffer[cb->tail];
 		cb->tail++;
 
 		// Wrap around to the beginning when the pointer is at the end of the array

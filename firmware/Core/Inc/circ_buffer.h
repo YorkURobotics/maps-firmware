@@ -39,6 +39,6 @@ typedef enum {
 // Declare methods for circular buffer
 BufferStatus checkCircBuff(CircularBuffer *cb);
 bool circBuffPush(CircularBuffer *cb, uint8_t data[], int dataLength);
-bool circBuffPop(CircularBuffer *cb, uint8_t *data[], int sendLength);
+bool circBuffPop(CircularBuffer *cb, uint8_t *data, int sendLength);
 
 #endif /* INC_CIRC_BUFFER_H_ */
