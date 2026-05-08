@@ -17,7 +17,7 @@
 BufferStatus checkCircBuff(CircularBuffer *cb) {
 	if (cb->head == cb->tail) {
 		return BUFFER_EMPTY;
-	} else if ((cb->head + 1) == cb->tail) {
+	} else if ((cb->head + 1) % cb->maxLen == 0) { /* else if ((cb->head + 1) == cb->tail) */
 		return BUFFER_FULL;
 	} else {
 		return BUFFER_PARTIAL;
