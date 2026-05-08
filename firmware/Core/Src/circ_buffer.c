@@ -34,11 +34,10 @@ BufferStatus checkCircBuff(CircularBuffer *cb) {
  * @return false if the buffer is full or unable to accept data.
  */
 bool circBuffPush(CircularBuffer *cb, uint8_t data[], int dataLength) {
-	if (checkCircBuff(cb) == BUFFER_FULL) {
-		return false;
-	}
-
 	for (int i = 0; i < dataLength; i++) {
+		if (checkCircBuff(cb) == BUFFER_FULL) {
+			return false;
+		}
 		cb->buffer[cb->head] = data[i];
 		cb->head++;
 
@@ -61,11 +60,10 @@ bool circBuffPush(CircularBuffer *cb, uint8_t data[], int dataLength) {
  * @return false if the buffer is empty.
  */
 bool circBuffPop(CircularBuffer *cb, uint8_t *data, int sendLength) {
-	if (checkCircBuff(cb) == BUFFER_EMPTY) {
-		return false;
-	}
-
 	for (int i = 0; i < sendLength; i++) {
+		if (checkCircBuff(cb) == BUFFER_EMPTY) {
+			return false;
+		}
 		data[i] = cb->buffer[cb->tail];
 		cb->tail++;
 
