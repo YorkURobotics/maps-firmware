@@ -1,12 +1,7 @@
-#include "camera_joint.h"
+#include "camera_joint_can.h"
 #include "can_handler.h"
-#include <stdint.h>
 
 static CameraJoint_t *camera_joint_can_instance = 0;
-
-// -----------------------------------------------------------------------------
-// Internal helper functions
-// -----------------------------------------------------------------------------
 
 static int16_t CAN_ReadInt16LE(uint8_t low_byte, uint8_t high_byte)
 {
@@ -36,10 +31,6 @@ static int16_t DegreesToTenths(float value)
     }
 }
 
-// -----------------------------------------------------------------------------
-// Public functions
-// -----------------------------------------------------------------------------
-
 void CameraJointCAN_Init(CameraJoint_t *joint)
 {
     camera_joint_can_instance = joint;
@@ -56,6 +47,11 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
     {
         case CAN_CAMERA_JOINT_SET_ANGLES_ID:
         {
+            /*
+             * Normal/manual command:
+             * Byte 0-1 = pan angle in 0.1 degrees
+             * Byte 2-3 = tilt angle in 0.1 degrees
+             */
             if (len < CAN_CAMERA_JOINT_SET_ANGLES_DLC)
             {
                 return;
@@ -67,11 +63,48 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
             float pan_deg = TenthsToDegrees(pan_tenths);
             float tilt_deg = TenthsToDegrees(tilt_tenths);
 
-            CameraJoint_SetAngles(
-                camera_joint_can_instance,
-                pan_deg,
-                tilt_deg
-            );
+            CameraJoint_SetAngles(camera_joint_can_instance, pan_deg, tilt_deg);
+            break;
+        }
+
+        case CAN_CAMERA_JOINT_PANORAMA_MOVE_ID:
+        {
+            /*
+             * Panorama single-axis command:
+             *
+             * Byte 0:
+             *   0x00 = move X axis only = pan
+             *   0x01 = move Y axis only = tilt
+             *
+             * Byte 1-2:
+             *   angle in 0.1 degrees, 0 to 2700
+             */
+            if (len < CAN_CAMERA_JOINT_PANORAMA_MOVE_DLC)
+            {
+                return;
+            }
+
+            uint8_t axis = data[0];
+
+            int16_t angle_tenths = CAN_ReadInt16LE(data[1], data[2]);
+            float angle_deg = TenthsToDegrees(angle_tenths);
+
+            if (axis == CAMERA_JOINT_AXIS_X)
+            {
+                CameraJoint_SetPan(camera_joint_can_instance, angle_deg);
+            }
+            else if (axis == CAMERA_JOINT_AXIS_Y)
+            {
+                CameraJoint_SetTilt(camera_joint_can_instance, angle_deg);
+            }
+            else
+            {
+                /*
+                 * Unknown axis selector.
+                 * Ignore command.
+                 */
+                return;
+            }
 
             break;
         }
@@ -98,8 +131,8 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
         case CAN_CAMERA_JOINT_GET_STATUS_ID:
         {
             /*
-             * Do not send directly here unless you pass hcan into this function.
-             * For now, status can be sent periodically from main.c.
+             * Status can be sent periodically from main.c,
+             * or later you can send immediate response here.
              */
             break;
         }
@@ -128,7 +161,7 @@ HAL_StatusTypeDef CameraJointCAN_SendStatus(CAN_HandleTypeDef *hcan)
     CAN_WriteInt16LE(data, 2U, tilt_tenths);
 
     data[4] = CAMERA_JOINT_STATUS_OK;
-    data[5] = 0U;
+    data[5] = (uint8_t)camera_joint_can_instance->mode;
     data[6] = 0U;
     data[7] = 0U;
 
