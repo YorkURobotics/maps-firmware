@@ -48,9 +48,8 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
         case CAN_CAMERA_JOINT_SET_ANGLES_ID:
         {
             /*
-             * Normal/manual command:
-             * Byte 0-1 = pan angle in 0.1 degrees
-             * Byte 2-3 = tilt angle in 0.1 degrees
+             * Byte 0-1 = pan angle in tenths of degrees
+             * Byte 2-3 = tilt angle in tenths of degrees
              */
             if (len < CAN_CAMERA_JOINT_SET_ANGLES_DLC)
             {
@@ -70,14 +69,12 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
         case CAN_CAMERA_JOINT_PANORAMA_MOVE_ID:
         {
             /*
-             * Panorama single-axis command:
-             *
              * Byte 0:
-             *   0x00 = move X axis only = pan
-             *   0x01 = move Y axis only = tilt
+             *   0x00 = X axis / pan
+             *   0x01 = Y axis / tilt
              *
              * Byte 1-2:
-             *   angle in 0.1 degrees, 0 to 2700
+             *   angle in tenths of degrees, little-endian
              */
             if (len < CAN_CAMERA_JOINT_PANORAMA_MOVE_DLC)
             {
@@ -89,6 +86,16 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
             int16_t angle_tenths = CAN_ReadInt16LE(data[1], data[2]);
             float angle_deg = TenthsToDegrees(angle_tenths);
 
+            if (angle_deg < 0.0f)
+            {
+                angle_deg = 0.0f;
+            }
+
+            if (angle_deg > 270.0f)
+            {
+                angle_deg = 270.0f;
+            }
+
             if (axis == CAMERA_JOINT_AXIS_X)
             {
                 CameraJoint_SetPan(camera_joint_can_instance, angle_deg);
@@ -99,10 +106,6 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
             }
             else
             {
-                /*
-                 * Unknown axis selector.
-                 * Ignore command.
-                 */
                 return;
             }
 
@@ -131,8 +134,8 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
         case CAN_CAMERA_JOINT_GET_STATUS_ID:
         {
             /*
-             * Status can be sent periodically from main.c,
-             * or later you can send immediate response here.
+             * You can send status from main.c or can_handler.c later.
+             * Do nothing for now.
              */
             break;
         }
@@ -161,7 +164,7 @@ HAL_StatusTypeDef CameraJointCAN_SendStatus(CAN_HandleTypeDef *hcan)
     CAN_WriteInt16LE(data, 2U, tilt_tenths);
 
     data[4] = CAMERA_JOINT_STATUS_OK;
-    data[5] = (uint8_t)camera_joint_can_instance->mode;
+    data[5] = 0U;
     data[6] = 0U;
     data[7] = 0U;
 
