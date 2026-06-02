@@ -98,10 +98,12 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
 
             if (axis == CAMERA_JOINT_AXIS_X)
             {
+                CameraJoint_SetTilt(camera_joint_can_instance, 135.0f);
                 CameraJoint_SetPan(camera_joint_can_instance, angle_deg);
             }
             else if (axis == CAMERA_JOINT_AXIS_Y)
             {
+                CameraJoint_SetPan(camera_joint_can_instance, 135.0f);
                 CameraJoint_SetTilt(camera_joint_can_instance, angle_deg);
             }
             else
