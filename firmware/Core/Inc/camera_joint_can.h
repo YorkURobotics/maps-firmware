@@ -45,6 +45,7 @@
 void CameraJointCAN_Init(CameraJoint_t *joint);
 
 void CameraJointCAN_ProcessFrame(
+    CAN_HandleTypeDef *hcan,
     uint32_t id,
     uint8_t *data,
     uint8_t len

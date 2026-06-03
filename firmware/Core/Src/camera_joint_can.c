@@ -36,7 +36,7 @@ void CameraJointCAN_Init(CameraJoint_t *joint)
     camera_joint_can_instance = joint;
 }
 
-void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
+void CameraJointCAN_ProcessFrame(CAN_HandleTypeDef *hcan, uint32_t id, uint8_t *data, uint8_t len)
 {
     if (camera_joint_can_instance == 0)
     {
@@ -135,10 +135,7 @@ void CameraJointCAN_ProcessFrame(uint32_t id, uint8_t *data, uint8_t len)
 
         case CAN_CAMERA_JOINT_GET_STATUS_ID:
         {
-            /*
-             * You can send status from main.c or can_handler.c later.
-             * Do nothing for now.
-             */
+          CameraJointCAN_SendStatus(hcan);
             break;
         }
 
