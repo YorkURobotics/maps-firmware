@@ -50,7 +50,7 @@ void CameraJointCAN_ProcessFrame(CAN_HandleTypeDef *hcan, uint32_t id, uint8_t *
             /*
              * Byte 0-1 = pan angle in tenths of degrees
              */
-            if (len < CAN_CAMERA_JOINT_SET_ANGLES_DLC)
+            if (len < CAN_SERVO_DLC)
             {
                 return;
             }
