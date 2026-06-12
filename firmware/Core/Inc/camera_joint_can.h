@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "main.h"
-#include "camera_joint.h"
+#include "servo.h"
 
 /*
  * Extended 29-bit CAN IDs
@@ -14,9 +14,9 @@
 /*
  * Payload sizes
  */
-#define CAN_SERVO_DLC       2U
+#define CAN_SERVO_DLC      2U
 
-void CameraJointCAN_Init(CameraJoint_t *joint);
+void CameraJointCAN_Init(Servo_t *pan_servo, Servo_t *tilt_servo);
 
 void CameraJointCAN_ProcessFrame(
     CAN_HandleTypeDef *hcan,

@@ -1,17 +1,40 @@
 #include "camera_joint_can.h"
 #include "can_handler.h"
 
-static CameraJoint_t *camera_joint_can_instance = 0;
+static Servo_t *pan_servo_instance = 0;
+static Servo_t *tilt_servo_instance = 0;
+
+/*
+ * Optional software limits for the camera servos.
+ * These replace the old CameraJoint_t min/max fields.
+ */
+#define PAN_MIN_DEG        0.0f
+#define PAN_MAX_DEG        270.0f
+
+#define TILT_MIN_DEG       0.0f
+#define TILT_MAX_DEG       270.0f
+
+#define PAN_CENTER_DEG     135.0f
+#define TILT_CENTER_DEG    135.0f
+
+static float ClampFloat(float value, float min, float max)
+{
+    if (value < min)
+    {
+        return min;
+    }
+
+    if (value > max)
+    {
+        return max;
+    }
+
+    return value;
+}
 
 static int16_t CAN_ReadInt16LE(uint8_t low_byte, uint8_t high_byte)
 {
     return (int16_t)((uint16_t)low_byte | ((uint16_t)high_byte << 8));
-}
-
-static void CAN_WriteInt16LE(uint8_t *data, uint8_t index, int16_t value)
-{
-    data[index] = (uint8_t)(value & 0xFF);
-    data[index + 1U] = (uint8_t)((value >> 8) & 0xFF);
 }
 
 static float TenthsToDegrees(int16_t value)
@@ -19,26 +42,55 @@ static float TenthsToDegrees(int16_t value)
     return ((float)value) / 10.0f;
 }
 
-static int16_t DegreesToTenths(float value)
+static void CameraJointCAN_SetPan(float angle_deg)
 {
-    if (value >= 0.0f)
+    if (pan_servo_instance == 0)
     {
-        return (int16_t)((value * 10.0f) + 0.5f);
+        return;
     }
-    else
-    {
-        return (int16_t)((value * 10.0f) - 0.5f);
-    }
+
+    angle_deg = ClampFloat(angle_deg, PAN_MIN_DEG, PAN_MAX_DEG);
+    Servo_SetAngle(pan_servo_instance, angle_deg);
 }
 
-void CameraJointCAN_Init(CameraJoint_t *joint)
+static void CameraJointCAN_SetTilt(float angle_deg)
 {
-    camera_joint_can_instance = joint;
+    if (tilt_servo_instance == 0)
+    {
+        return;
+    }
+
+    angle_deg = ClampFloat(angle_deg, TILT_MIN_DEG, TILT_MAX_DEG);
+    Servo_SetAngle(tilt_servo_instance, angle_deg);
 }
 
-void CameraJointCAN_ProcessFrame(CAN_HandleTypeDef *hcan, uint32_t id, uint8_t *data, uint8_t len)
+void CameraJointCAN_Init(Servo_t *pan_servo, Servo_t *tilt_servo)
 {
-    if (camera_joint_can_instance == 0)
+    pan_servo_instance = pan_servo;
+    tilt_servo_instance = tilt_servo;
+
+    Servo_Init(pan_servo_instance);
+    Servo_Init(tilt_servo_instance);
+
+    CameraJointCAN_SetPan(PAN_CENTER_DEG);
+    CameraJointCAN_SetTilt(TILT_CENTER_DEG);
+}
+
+void CameraJointCAN_ProcessFrame(
+    CAN_HandleTypeDef *hcan,
+    uint32_t id,
+    uint8_t *data,
+    uint8_t len
+)
+{
+    (void)hcan;
+
+    if (data == 0)
+    {
+        return;
+    }
+
+    if (len < CAN_SERVO_DLC)
     {
         return;
     }
@@ -50,34 +102,22 @@ void CameraJointCAN_ProcessFrame(CAN_HandleTypeDef *hcan, uint32_t id, uint8_t *
             /*
              * Byte 0-1 = pan angle in tenths of degrees
              */
-            if (len < CAN_SERVO_DLC)
-            {
-                return;
-            }
-
             int16_t pan_tenths = CAN_ReadInt16LE(data[0], data[1]);
-
             float pan_deg = TenthsToDegrees(pan_tenths);
 
-            CameraJoint_SetPan(camera_joint_can_instance, pan_deg);
+            CameraJointCAN_SetPan(pan_deg);
             break;
         }
 
-    case CAN_SERVO_Y:
+        case CAN_SERVO_Y:
         {
-             /*
+            /*
              * Byte 0-1 = tilt angle in tenths of degrees
              */
-            if (len < CAN_SERVO_DLC)
-            {
-                return;
-            }
-
             int16_t tilt_tenths = CAN_ReadInt16LE(data[0], data[1]);
-
             float tilt_deg = TenthsToDegrees(tilt_tenths);
 
-            CameraJoint_SetTilt(camera_joint_can_instance, tilt_deg);
+            CameraJointCAN_SetTilt(tilt_deg);
             break;
         }
 
@@ -85,4 +125,3 @@ void CameraJointCAN_ProcessFrame(CAN_HandleTypeDef *hcan, uint32_t id, uint8_t *
             break;
     }
 }
-
