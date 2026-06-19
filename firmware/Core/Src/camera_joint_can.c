@@ -32,9 +32,9 @@ static float ClampFloat(float value, float min, float max)
     return value;
 }
 
-static int16_t CAN_ReadInt16LE(uint8_t low_byte, uint8_t high_byte)
+static int16_t CAN_ReadInt16BE(uint8_t low_byte, uint8_t high_byte)
 {
-    return (int16_t)((uint16_t)low_byte | ((uint16_t)high_byte << 8));
+	return (int16_t)((uint16_t)high_byte | ((uint16_t)low_byte <<8));
 }
 
 static float TenthsToDegrees(int16_t value)
@@ -102,7 +102,7 @@ void CameraJointCAN_ProcessFrame(
             /*
              * Byte 0-1 = pan angle in tenths of degrees
              */
-            int16_t pan_tenths = CAN_ReadInt16LE(data[0], data[1]);
+            int16_t pan_tenths = CAN_ReadInt16BE(data[0], data[1]);
             float pan_deg = TenthsToDegrees(pan_tenths);
 
             CameraJointCAN_SetPan(pan_deg);
@@ -114,7 +114,7 @@ void CameraJointCAN_ProcessFrame(
             /*
              * Byte 0-1 = tilt angle in tenths of degrees
              */
-            int16_t tilt_tenths = CAN_ReadInt16LE(data[0], data[1]);
+            int16_t tilt_tenths = CAN_ReadInt16BE(data[0], data[1]);
             float tilt_deg = TenthsToDegrees(tilt_tenths);
 
             CameraJointCAN_SetTilt(tilt_deg);
