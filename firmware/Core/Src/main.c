@@ -1,50 +1,42 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "camera_joint_can.h"
 #include "can_handler.h"
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 CAN_HandleTypeDef hcan;
 
+TIM_HandleTypeDef htim2;
+
 /* USER CODE BEGIN PV */
+
+
+volatile uint32_t can_rx_count = 0;
+volatile uint32_t last_can_id = 0;
+volatile uint8_t last_can_len = 0;
+volatile uint8_t last_can_data[8] = {0};
+
+volatile uint32_t can_error_count = 0;
+volatile uint32_t last_can_error = 0;
+
 
 /* USER CODE END PV */
 
@@ -52,6 +44,7 @@ CAN_HandleTypeDef hcan;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -69,7 +62,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+	Servo_t tilt;
+	Servo_t pan;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -78,34 +72,97 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CAN_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  if(HAL_CAN_Start(&hcan) != HAL_OK) Error_Handler();
-  HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO1_MSG_PENDING);
+  if (Servo_Init(&pan, &htim2, TIM_CHANNEL_2, 500, 2500, 270.0f) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+  if (Servo_Init(&tilt, &htim2, TIM_CHANNEL_1, 500, 2500, 270.0f) != HAL_OK)
+    {
+      Error_Handler();
+    } 
+
+  if (CameraJointCAN_Init(&pan, &tilt) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+  if (CAN_CONFIG(&hcan) != HAL_OK)
+  {
+      Error_Handler();
+  }
+
+  /*
+   * Start CAN peripheral
+   */
+  if (HAL_CAN_Start(&hcan) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /*
+   * Enable CAN RX FIFO1 interrupt
+   */
+  if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO1_MSG_PENDING) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /*
+   * Optional CAN error interrupt for debugging
+   */
+  if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_ERROR) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+
   while (1)
   {
+    /*
+     * Debug variables to watch:
+     *
+     * boot_test_done
+     * can_rx_count
+     * last_can_id
+     * last_can_len
+     * last_can_data[0..7]
+     * can_error_count
+     * last_can_error
+     *
+     * Expected after boot:
+     * boot_test_done = 1
+     *
+     * Expected after CAN angle command:
+     * can_rx_count > 0
+     * last_can_id = 0x0E110C10
+     * last_can_len = 4
+     */
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
+
   /* USER CODE END 3 */
 }
 
@@ -157,11 +214,9 @@ static void MX_CAN_Init(void)
 {
 
   /* USER CODE BEGIN CAN_Init 0 */
-
   /* USER CODE END CAN_Init 0 */
 
   /* USER CODE BEGIN CAN_Init 1 */
-
   /* USER CODE END CAN_Init 1 */
   hcan.Instance = CAN;
   hcan.Init.Prescaler = 3;
@@ -180,10 +235,68 @@ static void MX_CAN_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN_Init 2 */
-
-  CAN_CONFIG(&hcan);
-
   /* USER CODE END CAN_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 71;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 20000-1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 1500;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.Pulse = 0;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
 
 }
 
@@ -196,7 +309,6 @@ static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
-
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
@@ -225,19 +337,46 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
 
-void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan) {
-	CAN_RxHeaderTypeDef rxHeader;
-	uint8_t rxData[8];
+void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan_ptr)
+{
+  CAN_RxHeaderTypeDef rxHeader;
+  uint8_t rxData[8];
 
-	if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &rxHeader, rxData) == HAL_OK) {
-		CAN_Process_Incoming(rxHeader.ExtId, rxData, rxHeader.DLC);
-	}
+  if (HAL_CAN_GetRxMessage(hcan_ptr, CAN_RX_FIFO1, &rxHeader, rxData) == HAL_OK)
+  {
+    uint32_t id;
+
+    if (rxHeader.IDE == CAN_ID_EXT)
+    {
+      id = rxHeader.ExtId;
+    }
+    else
+    {
+      id = rxHeader.StdId;
+    }
+
+    can_rx_count++;
+    last_can_id = id;
+    last_can_len = rxHeader.DLC;
+
+    for (uint8_t i = 0; i < 8; i++)
+    {
+      last_can_data[i] = rxData[i];
+    }
+
+    CAN_Process_Incoming(id, rxData, rxHeader.DLC);
+  }
+}
+
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan_ptr)
+{
+  can_error_count++;
+  last_can_error = HAL_CAN_GetError(hcan_ptr);
 }
 
 /* USER CODE END 4 */
@@ -249,11 +388,13 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
+
   __disable_irq();
+
   while (1)
   {
   }
+
   /* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
@@ -267,8 +408,6 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
