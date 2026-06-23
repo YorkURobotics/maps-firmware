@@ -32,9 +32,9 @@ static float ClampFloat(float value, float min, float max)
     return value;
 }
 
-static int16_t CAN_ReadInt16BE(uint8_t low_byte, uint8_t high_byte)
+static int16_t CAN_ReadInt16BE(uint8_t high_byte, uint8_t low_byte)
 {
-	return (int16_t)((uint16_t)high_byte | ((uint16_t)low_byte <<8));
+	return (int16_t)(((uint16_t)high_byte << 8) | (uint16_t)low_byte);
 }
 
 static float TenthsToDegrees(int16_t value)
