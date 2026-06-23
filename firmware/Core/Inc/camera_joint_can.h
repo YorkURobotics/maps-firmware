@@ -16,13 +16,9 @@
  */
 #define CAN_SERVO_DLC      2U
 
-void CameraJointCAN_Init(Servo_t *pan_servo, Servo_t *tilt_servo);
+HAL_StatusTypeDef CameraJointCAN_Init(Servo_t *pan_servo, Servo_t *tilt_servo);
 
-void CameraJointCAN_ProcessFrame(
-    CAN_HandleTypeDef *hcan,
-    uint32_t id,
-    uint8_t *data,
-    uint8_t len
-);
+void CameraJointCAN_Handle_Pan(uint8_t* data, uint8_t len);
+void CameraJointCAN_Handle_Tilt(uint8_t* data, uint8_t len);
 
 #endif

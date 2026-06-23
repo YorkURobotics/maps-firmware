@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "can_handler.h"
+#include "camera_joint_can.h"
 
 HAL_StatusTypeDef CAN_CONFIG(CAN_HandleTypeDef *hcan) {
 	CAN_FilterTypeDef sFilterConfig;
@@ -47,6 +48,15 @@ void CAN_Process_Incoming(uint32_t id, uint8_t *data, uint8_t len) {
 //		case CAN_SERVO1:
 //		// Handle specific logic for CAN_SERVO1 here
 //			break;
+    
+    case CAN_SERVO_X:
+      CameraJointCAN_Handle_Pan(data, len);
+      break;
+
+    case CAN_SERVO_Y:
+      CameraJointCAN_Handle_Tilt(data, len);
+      break;
+
 		default:
 			// Log unknown IDs for debugging
 			break;

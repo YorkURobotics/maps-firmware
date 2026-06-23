@@ -86,31 +86,24 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  tilt.htim = &htim2;
+  if (Servo_Init(&pan, &htim2, TIM_CHANNEL_2, 500, 2500, 270.0f) != HAL_OK)
+    {
+      Error_Handler();
+    }
 
-  tilt.channel = TIM_CHANNEL_1;
+  if (Servo_Init(&tilt, &htim2, TIM_CHANNEL_1, 500, 2500, 270.0f) != HAL_OK)
+    {
+      Error_Handler();
+    } 
 
-  tilt.min_us = 500;
-
-  tilt.max_us = 2500;
-
-  tilt.max_angle_deg = 270.0f;
-
-  pan.htim = &htim2;
-
-  pan.channel = TIM_CHANNEL_2;
-
-  pan.min_us = 500;
-
-  pan.max_us = 2500;
-
-  pan.max_angle_deg = 270.0f;
-
-  CameraJointCAN_Init(&pan, &tilt);
+  if (CameraJointCAN_Init(&pan, &tilt) != HAL_OK)
+    {
+      Error_Handler();
+    }
 
   if (CAN_CONFIG(&hcan) != HAL_OK)
   {
-    Error_Handler();
+      Error_Handler();
   }
 
   /*
@@ -376,7 +369,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan_ptr)
       last_can_data[i] = rxData[i];
     }
 
-    CameraJointCAN_ProcessFrame(hcan_ptr, id, rxData, rxHeader.DLC);
+    CAN_Process_Incoming(id, rxData, rxHeader.DLC);
   }
 }
 

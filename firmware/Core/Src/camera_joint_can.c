@@ -64,64 +64,54 @@ static void CameraJointCAN_SetTilt(float angle_deg)
     Servo_SetAngle(tilt_servo_instance, angle_deg);
 }
 
-void CameraJointCAN_Init(Servo_t *pan_servo, Servo_t *tilt_servo)
+HAL_StatusTypeDef CameraJointCAN_Init(Servo_t *pan_servo, Servo_t *tilt_servo)
 {
+    if ((pan_servo == NULL) || (tilt_servo == NULL))
+      {
+        return HAL_ERROR;
+      }
+
     pan_servo_instance = pan_servo;
     tilt_servo_instance = tilt_servo;
-
-    Servo_Init(pan_servo_instance);
-    Servo_Init(tilt_servo_instance);
-
     CameraJointCAN_SetPan(PAN_CENTER_DEG);
     CameraJointCAN_SetTilt(TILT_CENTER_DEG);
+    return HAL_OK;
 }
 
-void CameraJointCAN_ProcessFrame(
-    CAN_HandleTypeDef *hcan,
-    uint32_t id,
-    uint8_t *data,
-    uint8_t len
-)
+void CameraJointCAN_Handle_Pan(uint8_t *data, uint8_t len)
 {
-    (void)hcan;
-
-    if (data == 0)
+  if (data == 0)
     {
         return;
     }
 
-    if (len < CAN_SERVO_DLC)
+  if (len < CAN_SERVO_DLC)
+    {
+        return;
+    }
+/*
+* Byte 0-1 = pan angle in tenths of degrees
+*/
+  int16_t pan_tenths = CAN_ReadInt16BE(data[0], data[1]);
+  float pan_deg = TenthsToDegrees(pan_tenths);
+  CameraJointCAN_SetPan(pan_deg);
+}
+
+void CameraJointCAN_Handle_Tilt(uint8_t *data, uint8_t len)
+{
+  if (data == 0)
     {
         return;
     }
 
-    switch (id)
+  if (len < CAN_SERVO_DLC)
     {
-        case CAN_SERVO_X:
-        {
-            /*
-             * Byte 0-1 = pan angle in tenths of degrees
-             */
-            int16_t pan_tenths = CAN_ReadInt16BE(data[0], data[1]);
-            float pan_deg = TenthsToDegrees(pan_tenths);
-
-            CameraJointCAN_SetPan(pan_deg);
-            break;
-        }
-
-        case CAN_SERVO_Y:
-        {
-            /*
-             * Byte 0-1 = tilt angle in tenths of degrees
-             */
-            int16_t tilt_tenths = CAN_ReadInt16BE(data[0], data[1]);
-            float tilt_deg = TenthsToDegrees(tilt_tenths);
-
-            CameraJointCAN_SetTilt(tilt_deg);
-            break;
-        }
-
-        default:
-            break;
+        return;
     }
+/*
+* Byte 0-1 = tilt angle in tenths of degrees
+*/
+  int16_t tilt_tenths = CAN_ReadInt16BE(data[0], data[1]);
+  float tilt_deg = TenthsToDegrees(tilt_tenths);
+  CameraJointCAN_SetTilt(tilt_deg);
 }

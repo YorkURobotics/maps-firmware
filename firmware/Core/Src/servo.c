@@ -16,17 +16,30 @@ static uint16_t Servo_ClampPulse(Servo_t *servo, uint16_t pulse_us)
     return pulse_us;
 }
 
-void Servo_Init(Servo_t *servo)
+HAL_StatusTypeDef Servo_Init(Servo_t* servo, TIM_HandleTypeDef* htim, uint32_t channel, uint16_t min_us, uint16_t max_us, float max_angle_deg)
 {
-    if (servo == 0)
-    {
-        return;
-    }
+    if (servo == NULL || htim == NULL)
+      {
+        return HAL_ERROR;
+      }
 
-    HAL_TIM_PWM_Start(servo->htim, servo->channel);
+    if (min_us >= max_us)
+      {
+        return HAL_ERROR;
+      }
 
-    float center_angle = servo->max_angle_deg / 2.0f;
-    Servo_SetAngle(servo, center_angle);
+    if (max_angle_deg <= 0.0f)
+      {
+        return HAL_ERROR;
+      }
+
+    servo->htim = htim;
+    servo->channel = channel;
+    servo->min_us = min_us;
+    servo->max_us = max_us;
+    servo->max_angle_deg = max_angle_deg;
+
+    return HAL_TIM_PWM_Start(servo->htim, servo->channel);
 }
 
 void Servo_SetPulseUs(Servo_t *servo, uint16_t pulse_us)
